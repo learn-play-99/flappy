@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird Clone</title>
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        canvas { border: 2px solid black; background: lightblue; }
+    </style>
+</head>
+<body>
+
+    <h2>Flappy Bird Clone</h2>
+    <p>Press SPACE to jump</p>
+    <canvas id="gameCanvas" width="400" height="500"></canvas>
+
+    <py-script>
+import js
+from pyodide.ffi import create_proxy
+import random
+
+canvas = js.document.getElementById("gameCanvas")
+ctx = canvas.getContext("2d")
+
+# Game variables
+bird_x, bird_y = 50, 250
+gravity = 2
+velocity = 0
+pipes = []
+score = 0
+game_over = False
+
+def create_pipes():
+    height = random.randint(100, 300)
+    pipes.append({"x": 400, "height": height})
+
+def draw():
+    global bird_y, velocity, game_over, score
+
+    if not game_over:
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+        # Bird mechanics
+        velocity += gravity
+        bird_y += velocity
+
+        ctx.fillStyle = "yellow"
+        ctx.fillRect(bird_x, bird_y, 30, 30)
+
+        # Pipe mechanics
+        for pipe in pipes:
+            pipe["x"] -= 3
+            ctx.fillStyle = "green"
+            ctx.fillRect(pipe["x"], 0, 50, pipe["height"])
+            ctx.fillRect(pipe["x"], pipe["height"] + 100, 50, 500)
+
+            # Collision detection
+            if bird_x < pipe["x"] + 50 and bird_x + 30 > pipe["x"]:
+                if bird_y < pipe["height"] or bird_y + 30 > pipe["height"] + 100:
+                    game_over = True
+            
+            # Score update
+            if pipe["x"] == bird_x:
+                score += 1
+        
+        # Check game over
+        if bird_y > canvas.height or bird_y < 0:
+            game_over = True
+
+        # Draw score
+        ctx.fillStyle = "black"
+        ctx.font = "20px Arial"
+        ctx.fillText(f"Score: {score}", 10, 20)
+
+        # Generate new pipes
+        if len(pipes) == 0 or pipes[-1]["x"] < 250:
+            create_pipes()
+
+def jump(event):
+    global velocity
+    if event.key == " " and not game_over:
+        velocity = -15
+
+def reset(event):
+    global bird_y, velocity, pipes, score, game_over
+    if event.key == "r":
+        bird_y, velocity, pipes, score, game_over = 250, 0, [], 0, False
+
+js.document.addEventListener("keydown", create_proxy(jump))
+js.document.addEventListener("keydown", create_proxy(reset))
+
+def game_loop():
+    draw()
+    if not game_over:
+        js.setTimeout(create_proxy(game_loop), 30)
+
+game_loop()
+    </py-script>
+
+</body>
+</html>
